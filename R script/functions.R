@@ -3,8 +3,10 @@
 # --------------------------------------------- #
 
 
-library(tidyverse)
-library(patchwork)
+# The different used packages in the functions :
+# library(tidyverse)
+# library(patchwork)
+# library(ggtext)
 
 
 # I/ Correlation between efficacy and toxicity ----
@@ -92,6 +94,23 @@ regle_arret <- function(prior, ana_inter, seuil, critere) {
   
 }
 
+# 
+decision_essai <- function(liste, tab_arret) {
+  liste %>% 
+    bind_rows(.id = "data") %>% 
+    left_join(tab_arret, by = c("n" = "n_pat")) %>% 
+    group_by(data) %>% 
+    mutate(decision = case_when(ntox > tox_max & row_number() < n() ~ "Early stopping",
+                                ntox > tox_max & row_number() == n() ~ "Stopping",
+                                ntox <= tox_max ~ "Accept treatment",
+                                TRUE ~ NA_character_),
+           bool = str_detect(decision, "[S|s]topping"),
+           sum_bool = sum(bool),
+           keep = ifelse(sum_bool == 0, vec_eval_tox[length(vec_eval_tox)], first(n[bool]))) %>% 
+    ungroup() %>% 
+    filter(n == keep) %>% 
+    select(data:decision)
+}
 
 
 ## A/ TOP + PPtox ----
@@ -420,5 +439,239 @@ simu_simon <- function(ana_inter_eff,
               arret_prema = mean(str_detect(decision, "prématuré")),
               analyse_med = paste0("med = ", median(analyse), " / ", 
                                    paste(names(table(.$analyse)), "=", round(100 * prop.table(table(.$analyse)), 1), "%", collapse = " - ")))
+  
+}
+
+
+# III/ Other functions used in the work ----
+
+# Compute the minimum number of patients satisfying type I error risk (alpha) and power (seuil_puissance)
+# with threshold for exact binomial comparison.
+# Plot the alpha and power for the optimal rule for each number of patients until nmax.
+nsn_binom <- function(nmax, alpha, seuil_puissance, p0, p1) {
+  
+  resultats <- data.frame(
+    nb_pat = seq_len(nmax),
+    succes = NA,
+    typeI = NA,
+    puissance = NA
+  )
+  
+  for (i in seq_len(nmax)) {
+    
+    for (j in seq_len(i + 1) - 1) {
+      
+      prop <- 1 - pbinom(j, i, p0)
+      
+      if (prop <= alpha) {
+        
+        resultats[i, 2] <- j
+        resultats[i, 3] <- 1 - pbinom(j, i, p0)
+        resultats[i, 4] <- 1 - pbinom(j, i, p1)
+        break
+        
+      }
+      
+    }
+    
+  }
+  
+  plot <- ggplot(resultats %>% 
+                   group_by(succes) %>% 
+                   mutate(succes = if_else(row_number() == 1, paste0("> ", succes, " succès"), "")),
+                 aes(x = nb_pat)) +
+    geom_line(aes(color = "&alpha;", y = typeI)) +
+    geom_line(aes(color = "1 - &beta;", y = puissance)) +
+    geom_point(aes(color = "&alpha;", y = typeI)) +
+    geom_point(aes(color = "1 - &beta;", y = puissance)) +
+    geom_hline(yintercept = seuil_puissance, color = "#630929", linetype = "dashed") +
+    geom_hline(yintercept = alpha, color = "#630929", linetype = "dashed") +
+    geom_text(aes(y = 1.2, label = succes), angle = 90, hjust = 1) +
+    scale_y_continuous(label = scales::percent_format(), breaks = seq(0, 1, .25)) +
+    labs(x = "Nombre de patients",
+         y = "&alpha; ou 1 - &beta;",
+         colour = "Risque représenté") +
+    theme_light() +
+    theme(legend.text = element_markdown(),
+          axis.title.y = element_markdown())
+  print(plot)
+  
+  resultats_opti <- resultats %>% 
+    filter(puissance >= seuil_puissance) %>% 
+    slice_head(n = 1)
+  
+  return(list(resultats = resultats, resultats_opti = resultats_opti))
+  
+}
+
+
+# Find parameters of beta law satisfying a specified mean (moyenne) and width of confidence interval (largeur_ic)
+trouver_beta_ic <- function(moyenne, largeur_ic, conf.level = .9, dec = 2) {
+  
+  vec_ic <- c((1 - conf.level) / 2, (1 + conf.level) / 2)
+  soluce <- uniroot(f = function(x) diff(qbeta(vec_ic, x, x * (1 - moyenne) / moyenne)) - largeur_ic,
+                    interval = c(0, 100))
+  a <- round(soluce$root, dec)
+  b <- a * (1 - moyenne) / moyenne
+  
+  return(list(alpha = a, beta = b))
+  
+}
+
+# Plot the operating characteristics for the 10 scenarios
+plot_opchar <- function(tableau_scenars_plot, 
+                        metadata, 
+                        var,
+                        niveaux = c("topiva", "bopiva", "simon", "classique", "toxrapp", "toxprior"),
+                        etiquettes = c("TOP<sub>eff</sub> + PP<sub>tox</sub>", "BOP<sub>eff</sub> + PP<sub>tox</sub>",
+                                     "Simon + PP<sub>tox</sub>", "TOP<sub>eff/tox</sub> with 2 analyses", 
+                                     "TOP<sub>eff/tox</sub> with close monitoring of toxicity",
+                                     "TOP<sub>eff/tox</sub> with update of the prior of toxicity")) {
+  
+  # Mise au format long
+  tableau_res <- tableau_scenars_plot %>% 
+    select(!matches("C_")) %>% 
+    select(!matches("gamma")) %>% 
+    select(-c(probas)) %>% 
+    select(!starts_with("analyse_med")) %>% 
+    select(scenar, scenar_p, scenarios, probas_plot, R, everything()) %>% 
+    pivot_longer(cols = -c(scenar:R),
+                 names_pattern = "(.+_.+)_(.+)",
+                 names_to = c("stat", "schemas")) %>% 
+    mutate(schemas = factor(schemas, levels = niveaux, labels = etiquettes))
+  
+  layout <- 
+    "AB
+     CC"
+  
+  # Barplot
+  plot1 <- tableau_res %>% 
+    filter(stat == var) %>% 
+    ggplot(aes(x = scenar_p, y = value, fill = schemas)) +
+    geom_col(position = position_dodge2(), color = "black") +
+    geom_vline(xintercept = c(seq(1.5, 9.5, 1)), color = "grey50", 
+               size = 1, linetype = "dashed") +
+    coord_flip() +
+    theme(axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          panel.grid.major.y = element_blank(),
+          panel.grid.major.x = element_line(colour = "darkgrey", size = .7),
+          panel.border = element_rect(color = "transparent"),
+          legend.position = "bottom",
+          axis.title.x = element_text(size = 20),
+          axis.text.x = element_text(size = 16),
+          legend.text = element_markdown(size = 20),
+          legend.title = element_text(size = 24, face = "bold"),
+          plot.margin = margin(t = 0, r = 0, b = 0, l = 0))  +
+    guides(fill = guide_legend(nrow = 2)) +
+    scale_y_continuous(name = metadata$label[match(var, metadata$var)],
+                       limits = c(0, metadata$lim_sup[match(var, metadata$var)]),
+                       labels = eval(metadata$format_legende[[match(var, metadata$var)]]),
+                       breaks = eval(metadata$breaks[[match(var, metadata$var)]])) +
+    scale_fill_manual(values = c("#648FFF", "#785EF0", "#DC267F", "#FE6100", "#FFB000", "#22482F")) +
+    labs(x = NULL,
+         fill = "Design")
+  legende <- get_legend(plot1)
+  
+  # Annotations pour les scénarios
+  plot2 <- tableau_scenars_plot %>% 
+    ggplot() +
+    geom_richtext(aes(x = scenar_p, y = 1.1, label = scenarios), hjust = 1, fill = "transparent", label.color = "transparent", size = 7.5) +
+    geom_richtext(aes(x = scenar_p, y = 1.15, label = probas_plot), hjust = 0, fill = "transparent", label.color = "transparent", size = 7.5) +
+    geom_vline(xintercept = c(seq(1.5, 9.5, 1)), color = "grey50", 
+               size = 1, linetype = "dashed") +
+    coord_flip(clip = "off") +
+    ylim(c(.8, 1.7)) +
+    theme_void() +
+    theme(strip.background = element_rect(fill = NA, color = NA),
+          strip.text = element_textbox(
+            size = 12, 
+            color = "transparent", fill = "transparent", box.color = "transparent",
+            halign = 0.5, linetype = 1, r = unit(3, "pt"), width = unit(.001, "in"),
+            padding = margin(2, 0, 1, 0), margin = margin(3, 3, 3, 3)),
+          plot.margin = margin(r = 0))
+  
+  plot_tot <- plot2 + (plot1 + theme(legend.position = "none")) + legende +
+    plot_layout(design = layout, widths = c(1.5, 7), heights = c(10, 1))
+  
+  return(plot_tot)
+  
+}
+
+# Same as previous function but for all correlations
+plot_opchar_facet <- function(tableau_scenars_plot, metadata, var) {
+  
+  # Mise au format long
+  tableau_res <- tableau_scenars_plot %>% 
+    select(!matches("C_")) %>% 
+    select(!starts_with("analyse_med")) %>% 
+    select(!matches("gamma")) %>% 
+    select(-c(probas, EffTox, EffNotox, NoeffTox, NoeffNotox)) %>% 
+    select(scenar, scenar_p, scenarios, probas_plot, R, nom_corr, everything()) %>% 
+    pivot_longer(cols = -c(scenar:nom_corr),
+                 names_pattern = "(.+_.+)_(.+)",
+                 names_to = c("stat", "schemas")) %>% 
+    mutate(schemas = factor(schemas, 
+                            levels = c("topiva", "bopiva", "simon", "classique", "toxrapp", "toxprior"),
+                            labels = c("TOP<sub>eff</sub> + PP<sub>tox</sub>", "BOP<sub>eff</sub> + PP<sub>tox</sub>", "Simon + PP<sub>tox</sub>", "TOP<sub>eff/tox</sub> with 2 analyses", "TOP<sub>eff/tox</sub> with close monitoring of toxicity", "TOP<sub>eff/tox</sub> with update of the prior of toxicity")))
+  
+  layout <- 
+    "AB
+     CC"
+  
+  # Barplot
+  plot1 <- tableau_res %>% 
+    filter(stat == var) %>% 
+    ggplot(aes(x = scenar_p, y = value, fill = schemas)) +
+    geom_col(position = position_dodge2(), color = "black") +
+    geom_vline(xintercept = c(seq(1.5, 9.5, 1)), color = "grey50", 
+               size = 1, linetype = "dashed") +
+    coord_flip() +
+    facet_wrap(vars(nom_corr), ncol = 2, dir = "v") +
+    theme(axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          panel.grid.major.y = element_blank(),
+          panel.grid.major.x = element_line(colour = "darkgrey", size = .7),
+          panel.border = element_rect(color = "transparent"),
+          legend.position = "bottom",
+          axis.title.x = element_text(size = 20),
+          axis.text.x = element_text(size = 16),
+          legend.text = element_markdown(size = 20),
+          legend.title = element_text(size = 24, face = "bold"),
+          plot.margin = margin(t = 0, r = 0, b = 0, l = 0))  +
+    guides(fill = guide_legend(nrow = 2)) +
+    scale_y_continuous(name = metadata$label[match(var, metadata$var)],
+                       limits = c(0, metadata$lim_sup[match(var, metadata$var)]),
+                       labels = eval(metadata$format_legende[[match(var, metadata$var)]]),
+                       breaks = eval(metadata$breaks[[match(var, metadata$var)]])) +
+    scale_fill_manual(values = c("#648FFF", "#785EF0", "#DC267F", "#FE6100", "#FFB000", "#22482F")) +
+    labs(x = NULL,
+         fill = "Design")
+  legende <- get_legend(plot1)
+  
+  # Annotations pour les scénarios
+  plot2 <- tableau_scenars_plot %>% 
+    filter(nom_corr %in% c("R<sub>min</sub>", "R<sub>neg</sub>", "R<sub>ind</sub>")) %>% 
+    ggplot() +
+    geom_richtext(aes(x = scenar_p, y = 1.1, label = scenarios), hjust = 1, fill = "transparent", label.color = "transparent", size = 7.5) +
+    geom_richtext(aes(x = scenar_p, y = 1.15, label = probas_plot), hjust = 0, fill = "transparent", label.color = "transparent", size = 7.5) +
+    geom_vline(xintercept = c(seq(1.5, 9.5, 1)), color = "grey50", 
+               size = 1, linetype = "dashed") +
+    coord_flip(clip = "off") +
+    ylim(c(.8, 1.7)) +
+    theme_void() +
+    facet_wrap(vars(nom_corr), ncol = 2, nrow = 3, dir = "v") +
+    theme(strip.background = element_rect(fill = NA, color = NA),
+          strip.text = element_textbox(
+            size = 16, 
+            color = "transparent", fill = "transparent", box.color = "transparent",
+            halign = 0.5, linetype = 1, r = unit(3, "pt"), width = unit(.001, "in"),
+            padding = margin(2, 0, 1, 0), margin = margin(3, 3, 3, 3)),
+          plot.margin = margin(r = 0))
+  
+  plot_tot <- plot2 + (plot1 + theme(legend.position = "none")) + legende +
+    plot_layout(design = layout, widths = c(1.5, 7), heights = c(10, 1))
+  
+  return(plot_tot)
   
 }

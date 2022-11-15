@@ -28,3 +28,4 @@ vignettes/*.pdf
 .Renviron
 # Fichier Rproject
 MetimgastDesign.Rproj
+figures/
