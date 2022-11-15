@@ -12,3 +12,4 @@ Folders:
     - resultats_these.R = simulate the results of simulated trials
     - figures.R = generate the figures in the paper
     - simu_corr_data.R = how we simulated the correlated data
+- data = folder with the stored results (it takes time to replicate the simulations)
