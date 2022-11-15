@@ -5,14 +5,6 @@
 library(tidyverse)
 source("R script/functions.R")
 
-theme_set(theme_light() +
-            theme(strip.background = element_rect(fill = NA),
-                  strip.text = element_textbox(
-                    size = 12, 
-                    color = "white", fill = "#7888C0", box.color = "#000066",
-                    halign = 0.5, linetype = 1, r = unit(3, "pt"), width = unit(0.75, "npc"),
-                    padding = margin(2, 0, 1, 0), margin = margin(3, 3, 3, 3))))
-
 # Scenarios and probabilities ----
 
 # Get all the scenarios with all correlations

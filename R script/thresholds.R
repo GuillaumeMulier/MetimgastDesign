@@ -5,7 +5,6 @@
 
 # I/ Packages and source scripts ----
 
-source("R script/functions.R")
 source("R script/metadata.R")
 
 library(tidyverse)
@@ -14,6 +13,14 @@ library(cowplot)
 library(ggtext)
 # devtools::install_github("GuillaumeMulier/multibrasBOP2")
 library(multibrasBOP2)
+
+theme_set(theme_light() +
+            theme(strip.background = element_rect(fill = NA),
+                  strip.text = element_textbox(
+                    size = 12, 
+                    color = "white", fill = "#7888C0", box.color = "#000066",
+                    halign = 0.5, linetype = 1, r = unit(3, "pt"), width = unit(0.75, "npc"),
+                    padding = margin(2, 0, 1, 0), margin = margin(3, 3, 3, 3))))
 
 remove <- TRUE # Set to FALSE if you want to keep the different final objects of thresholds
 
@@ -69,6 +76,86 @@ tableau_scenars <- tableau_scenars %>%
   right_join(tableau_scenars, by = "nom_corr")
 save(tableau_scenars, file = paste0("data/scenar", format(Sys.Date(), "%Y%m%d"), ".Rdata"))
 if (remove) rm(tableau_scenars)
+
+## D/ Influence of the correlation on computed thresholds ----
+
+# function to plot the heatmap
+heatmap_top <- function(data, colonne) {
+  labelleur <- c("C_" = "&lambda;", "gamma" = "&gamma;", "alpha_calc" = "Planned &alpha;", "puissance_calc" = "Planned power")
+  data %>% 
+    pivot_longer(c(C_, gamma, alpha_calc, puissance_calc)) %>% 
+    filter(name == colonne) %>% 
+    ggplot(aes(x = correlation_H0, y = correlation_H1, fill = value, label = value)) +
+    geom_tile() +
+    geom_text(color = "white", size = 4) +
+    theme(legend.title = element_markdown()) +
+    facet_wrap(vars(name), labeller = labeller(name = labelleur)) +
+    scale_x_continuous(name = expression(paste("Correlation Eff/Tox under ", H[0])), expand = c(0, 0)) +
+    scale_y_continuous(name = expression(paste("Correlation Eff/Tox under ", H[1])), expand = c(0, 0)) +
+    labs(fill = labs(fill = labelleur[colonne]))
+}
+
+# TOP with 2 analyses
+corr_2 <- generer_corr_multi(seq(0, .15, .015), .15, .3)
+corr_3 <- generer_corr_multi(seq(0, .2, .02), .3, .2)
+tab_probas <- expand.grid(pas_0 = seq(0, .15, .015), pas_1 = seq(0, .2, .02)) %>% 
+  left_join(corr_2 %>% `colnames<-`(paste0(colnames(.), "_H0")), by = c("pas_0" = "Pet_H0")) %>% 
+  left_join(corr_3 %>% `colnames<-`(paste0(colnames(.), "_H1")), by = c("pas_1" = "Pet_H1"))
+liste_resultats <- list()
+for (i in seq_len(nrow(tab_probas))) {
+  liste_resultats[[i]] <- deter_cutoff(alpha = .05,
+                                       ana_inter = c(30, 51),
+                                       ana_inter_tox = c(30, 51),
+                                       p_n = unlist(tab_probas$probas_H0[i]),
+                                       p_a = unlist(tab_probas$probas_H1[i]),
+                                       mat_beta_xi = matrix(c(1, 1, 0, 0, 0, 1, 0, 1), nrow = 2, byrow = TRUE),
+                                       methode = 3L,
+                                       seed = 1993,
+                                       affich_mat = "No")[[1]]
+}
+table_resume_2 <- cbind(tab_probas, do.call(rbind, liste_resultats))
+save(table_resume_2, file = paste0("data/essais_cutoff_bis_", format(Sys.Date(), "%Y%m%d"), ".Rdata"))
+load("data/essais_cutoff_bis_20210830.Rdata")
+heatmap_seuils_30 <- map(c("C_", "gamma", "alpha_calc", "puissance_calc"), heatmap_top, data = table_resume_2) %>% 
+  wrap_plots()
+ggsave(plot = heatmap_seuils_30,
+       filename = "figures/threshold/heatmap_seuils_30eng.png",
+       device = "png", height = 8, width = 16)
+ggsave(plot = heatmap_seuils_30,
+       filename = "figures/threshold/heatmap_seuils_30eng.eps",
+       device = cairo_ps, height = 7000, width = 13000, units = "px", dpi = 800)
+rm(liste_resultats, tab_probas, table_resume_2, heatmap_seuils_30, corr_2, corr_3)
+
+# TOP with close monitoring of toxicity
+corr_2 <- generer_corr_multi(seq(0, .15, .015), .15, .3)
+corr_3 <- generer_corr_multi(seq(0, .2, .02), .3, .2)
+tab_probas <- expand.grid(pas_0 = seq(0, .15, .015), pas_1 = seq(0, .2, .02)) %>% 
+  left_join(corr_2 %>% `colnames<-`(paste0(colnames(.), "_H0")), by = c("pas_0" = "Pet_H0")) %>% 
+  left_join(corr_3 %>% `colnames<-`(paste0(colnames(.), "_H1")), by = c("pas_1" = "Pet_H1"))
+liste_resultats <- list()
+for (i in seq_len(nrow(tab_probas))) {
+  liste_resultats[[i]] <- deter_cutoff(alpha = .05,
+                                       ana_inter = c(30, 51),
+                                       ana_inter_tox = c(rep(10, 7), 11),
+                                       p_n = unlist(tab_probas$probas_H0[i]),
+                                       p_a = unlist(tab_probas$probas_H1[i]),
+                                       mat_beta_xi = matrix(c(1, 1, 0, 0, 0, 1, 0, 1), nrow = 2, byrow = TRUE),
+                                       methode = 3L,
+                                       seed = 1993,
+                                       affich_mat = "No")[[1]]
+}
+table_resume_tox_2 <- cbind(tab_probas, do.call(rbind, liste_resultats))
+save(table_resume_tox_2, file = paste0("~/essais_cutoff_tox_bis_", format(Sys.Date(), "%Y%m%d"), ".Rdata"))
+load("data/essais_cutoff_tox_bis_20210830.Rdata")
+heatmap_seuils_30 <- map(c("C_", "gamma", "alpha_calc", "puissance_calc"), heatmap_top, data = table_resume_tox_2) %>% 
+  wrap_plots()
+ggsave(plot = heatmap_seuils_30,
+       filename = "figures/threshold/heatmap_seuils_tox_30eng.png",
+       device = "png", height = 8, width = 16)
+ggsave(plot = heatmap_seuils_30,
+       filename = "figures/threshold/heatmap_seuils_tox_30eng.eps",
+       device = cairo_ps, height = 7000, width = 13000, units = "px", dpi = 800)
+rm(liste_resultats, tab_probas, table_resume_2, heatmap_seuils_30, corr_2, corr_3)
 
 
 # III/ TOP + Ivanova ----

@@ -7,6 +7,14 @@ library(tidyverse)
 source("R script/metadata.R")
 load("data/resultats_tox30_rposvar_20220201.Rdata")
 
+theme_set(theme_light() +
+            theme(strip.background = element_rect(fill = NA),
+                  strip.text = element_textbox(
+                    size = 12, 
+                    color = "white", fill = "#7888C0", box.color = "#000066",
+                    halign = 0.5, linetype = 1, r = unit(3, "pt"), width = unit(0.75, "npc"),
+                    padding = margin(2, 0, 1, 0), margin = margin(3, 3, 3, 3))))
+
 # Clean the table and add some new variables
 tableau_results_Rvar <- select(tableau_results_Rvar, -starts_with("analyse_med")) %>% 
   mutate(arret_both_topiva = arret_fut_topiva + arret_tox_topiva - (1 - accept_ttt_topiva),
