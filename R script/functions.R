@@ -526,7 +526,7 @@ plot_opchar <- function(tableau_scenars_plot,
                         etiquettes = c("TOP<sub>eff</sub> + PP<sub>tox</sub>", "BOP<sub>eff</sub> + PP<sub>tox</sub>",
                                      "Simon + PP<sub>tox</sub>", "TOP<sub>eff/tox</sub> with 2 analyses", 
                                      "TOP<sub>eff/tox</sub> with close monitoring of toxicity",
-                                     "TOP<sub>eff/tox</sub> with update of the prior of toxicity")) {
+                                     "TOP<sub>eff/tox</sub> with informative prior")) {
   
   # Mise au format long
   tableau_res <- tableau_scenars_plot %>% 
@@ -613,7 +613,7 @@ plot_opchar_facet <- function(tableau_scenars_plot, metadata, var) {
                  names_to = c("stat", "schemas")) %>% 
     mutate(schemas = factor(schemas, 
                             levels = c("topiva", "bopiva", "simon", "classique", "toxrapp", "toxprior"),
-                            labels = c("TOP<sub>eff</sub> + PP<sub>tox</sub>", "BOP<sub>eff</sub> + PP<sub>tox</sub>", "Simon + PP<sub>tox</sub>", "TOP<sub>eff/tox</sub> with 2 analyses", "TOP<sub>eff/tox</sub> with close monitoring of toxicity", "TOP<sub>eff/tox</sub> with update of the prior of toxicity")))
+                            labels = c("TOP<sub>eff</sub> + PP<sub>tox</sub>", "BOP<sub>eff</sub> + PP<sub>tox</sub>", "Simon + PP<sub>tox</sub>", "TOP<sub>eff/tox</sub> with 2 analyses", "TOP<sub>eff/tox</sub> with close monitoring of toxicity", "TOP<sub>eff/tox</sub> with informative prior")))
   
   layout <- 
     "AB

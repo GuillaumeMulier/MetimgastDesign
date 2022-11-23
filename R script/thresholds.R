@@ -81,7 +81,7 @@ if (remove) rm(tableau_scenars)
 
 # function to plot the heatmap
 heatmap_top <- function(data, colonne) {
-  labelleur <- c("C_" = "&lambda;", "gamma" = "&gamma;", "alpha_calc" = "Planned &alpha;", "puissance_calc" = "Planned power")
+  labelleur <- c("C_" = "&lambda;", "gamma" = "&gamma;", "alpha_calc" = "&alpha;", "puissance_calc" = "Power")
   data %>% 
     pivot_longer(c(C_, gamma, alpha_calc, puissance_calc)) %>% 
     filter(name == colonne) %>% 
