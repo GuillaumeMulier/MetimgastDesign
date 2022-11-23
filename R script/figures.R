@@ -3,6 +3,7 @@
 # -------------------------------------- #
 
 library(tidyverse)
+library(ggtext)
 
 source("R script/metadata.R")
 load("data/resultats_tox30_rposvar_20220201.Rdata")
