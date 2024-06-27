@@ -524,9 +524,9 @@ plot_opchar <- function(tableau_scenars_plot,
                         var,
                         niveaux = c("topiva", "bopiva", "simon", "classique", "toxrapp", "toxprior"),
                         etiquettes = c("TOP<sub>eff</sub> + PP<sub>tox</sub>", "BOP<sub>eff</sub> + PP<sub>tox</sub>",
-                                     "Simon + PP<sub>tox</sub>", "TOP<sub>eff/tox</sub> with 2 analyses", 
-                                     "TOP<sub>eff/tox</sub> with close monitoring of toxicity",
-                                     "TOP<sub>eff/tox</sub> with informative prior")) {
+                                     "Simon + PP<sub>tox</sub>", "TOP<sub>eff/tox</sub>", 
+                                     "TOP<sup>t</sup><sub>eff/tox</sub>",
+                                     "iTOP<sub>eff/tox</sub>")) {
   
   # Mise au format long
   tableau_res <- tableau_scenars_plot %>% 
@@ -538,7 +538,8 @@ plot_opchar <- function(tableau_scenars_plot,
     pivot_longer(cols = -c(scenar:R),
                  names_pattern = "(.+_.+)_(.+)",
                  names_to = c("stat", "schemas")) %>% 
-    mutate(schemas = factor(schemas, levels = niveaux, labels = etiquettes))
+    mutate(schemas = factor(schemas, levels = niveaux, labels = etiquettes)) %>% 
+    filter(!is.na(schemas))
   
   layout <- 
     "AB
@@ -612,8 +613,11 @@ plot_opchar_facet <- function(tableau_scenars_plot, metadata, var) {
                  names_pattern = "(.+_.+)_(.+)",
                  names_to = c("stat", "schemas")) %>% 
     mutate(schemas = factor(schemas, 
-                            levels = c("topiva", "bopiva", "simon", "classique", "toxrapp", "toxprior"),
-                            labels = c("TOP<sub>eff</sub> + PP<sub>tox</sub>", "BOP<sub>eff</sub> + PP<sub>tox</sub>", "Simon + PP<sub>tox</sub>", "TOP<sub>eff/tox</sub> with 2 analyses", "TOP<sub>eff/tox</sub> with close monitoring of toxicity", "TOP<sub>eff/tox</sub> with informative prior")))
+                            levels = c("topiva", "bopiva", "simon", #"classique", 
+                                       "toxrapp", "toxprior"),
+                            labels = c("TOP<sub>eff</sub> + PP<sub>tox</sub>", "BOP<sub>eff</sub> + PP<sub>tox</sub>", "Simon + PP<sub>tox</sub>", #"TOP<sub>eff/tox</sub>",
+                                       "TOP<sup>t</sup><sub>eff/tox</sub>", "iTOP<sub>eff/tox</sub>"))) %>% 
+    filter(!is.na(schemas))
   
   layout <- 
     "AB

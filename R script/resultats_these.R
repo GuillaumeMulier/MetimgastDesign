@@ -13,26 +13,25 @@ source("R script/metadata.R")
 
 # TOP and BOP for efficacy alone
 load("data/cutoff_planifie.Rdata")
-seuil_effseule <- seuil[[1]]
-rm(seuil)
+seuil_effseule <- seuil_effseule[[1]]
 
 # TOP and BOP for efficacy and toxicity
-load("data/scenar20210907.Rdata")
+load("data/scenar20240522.Rdata")
 # 2 analyses
 seuil_toxclassique <- tableau_scenars %>% 
-  filter(scenar == "H0", nom_corr == "Rpos1") %>% 
+  filter(scenar == "H0", nom_corr == "R<sub>pos,1</sub>") %>% 
   select(C__classique, gamma_classique, alpha_calc_classique, puissance_calc_classique) %>% 
   as.numeric() %>% 
   'names<-'(c("C_", "gamma", "alpha_calc", "puissance_calc"))
 seuil_toxrapprochee <- tableau_scenars %>% 
-  filter(scenar == "H0", nom_corr == "Rpos1") %>% 
+  filter(scenar == "H0", nom_corr == "R<sub>pos,1</sub>") %>% 
   select(C__toxrapp, gamma_toxrapp, alpha_calc_toxrapp, puissance_calc_toxrapp) %>% 
   as.numeric() %>% 
   'names<-'(c("C_", "gamma", "alpha_calc", "puissance_calc"))
 
 # Simon design r1 and r are computed inside the function
 # You can see in the script thresholds.R how it is done
-# r1 = 4 and r = 17
+# r1 = 5 and r = 16
 
 
 # II/ Simulate the scenarios for every correlation ----
@@ -79,7 +78,7 @@ for (i in seq_len(nrow(tableau_results_Rvar))) {
       ana_inter_tox = c(rep(5, 4), rep(10, 6), 1),
       liste_essais = essais,
       liste_cohortes = cohorte_2,
-      phieff = .15, phitox = .2,
+      phieff = .15, phitox = .25,
       prior_eff = .15, prior_tox = c(1, 1), critere_tox = .95,
       C_ = seuil_effseule[["C_"]], gamm = seuil_effseule[["gamma"]],
       interpatient = 6, max_teff = 180, max_ttox = 42
@@ -96,7 +95,7 @@ for (i in seq_len(nrow(tableau_results_Rvar))) {
       ana_inter_tox = c(rep(5, 4), rep(10, 6), 1),
       liste_essais = essais,
       liste_cohortes = cohorte_2,
-      phitox = .2,
+      phitox = .25,
       prior_tox = c(1, 1), critere_tox = .95,
       C_ = seuil_effseule[["C_"]], gamm = seuil_effseule[["gamma"]],
       p_n = tableau_results_Rvar$probas[tableau_results_Rvar$scenar == "H0" & tableau_results_Rvar$nom_corr == tableau_results_Rvar$nom_corr[i]] %>% pluck(1) %>% unname()
@@ -113,8 +112,8 @@ for (i in seq_len(nrow(tableau_results_Rvar))) {
       ana_inter_tox = c(rep(5, 4), rep(10, 6), 1),
       liste_essais = essais,
       liste_cohortes = cohorte_2,
-      pu = .15, pa = .3, 
-      phitox = .2, critere_tox = .95, prior_tox = c(1, 1)
+      pu = .15, pa = .3, alpha_simon = .1, 
+      phitox = .25, critere_tox = .95, prior_tox = c(1, 1)
     ) %>% 
     `colnames<-`(paste0(colnames(.), "_simon")) %>% 
     tibble_row()

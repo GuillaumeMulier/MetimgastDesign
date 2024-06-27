@@ -4,9 +4,12 @@
 
 library(tidyverse)
 library(ggtext)
+library(cowplot)
+library(patchwork)
 
 source("R script/metadata.R")
-load("data/resultats_tox30_rposvar_20220201.Rdata")
+source("R script/functions.R")
+load("data/resultats_tox30_rposvar_20240524.Rdata")
 
 theme_set(theme_light() +
             theme(strip.background = element_rect(fill = NA),
@@ -33,34 +36,58 @@ tableau_results_Rvar <- left_join(tableau_results_Rvar %>% select(-nom_corr), li
 # I/ With positive correlation between efficacy and toxicity ----
 
 plot_accept <- plot_opchar(tableau_results_Rvar %>% filter(nom_corr == "R<sub>pos,1</sub>") %>% select(-nom_corr), metadata_eng, "accept_ttt")
-ggsave(filename = "figures/results/accept_ttt_Rpos.png",
+plot_accept <- plot_opchar(tableau_results_Rvar %>% filter(nom_corr == "R<sub>pos,1</sub>") %>% select(-nom_corr), metadata_eng, "accept_ttt",
+                           niveaux = c("topiva", "bopiva", "simon", "toxrapp", "toxprior"),
+                           etiquettes = c("TOP<sub>eff</sub> + PP<sub>tox</sub>", "BOP<sub>eff</sub> + PP<sub>tox</sub>",
+                                          "Simon + PP<sub>tox</sub>", 
+                                          "TOP<sup>t</sup><sub>eff/tox</sub>",
+                                          "iTOP<sub>eff/tox</sub>"))
+ggsave(filename = "figures/results/accept_ttt_Rpos_rev2.png",
        plot = plot_accept, device = "png",
        height = 14, width = 20)
-ggsave(filename = "figures/results/accept_ttt_Rpos.eps",
+ggsave(filename = "figures/results/accept_ttt_Rpos_rev2.eps",
        plot = plot_accept, device = cairo_ps,
        height = 9000, width = 17000, units = "px", dpi = 800)
 
 plot_arret_prec <- plot_opchar(tableau_results_Rvar %>% filter(nom_corr == "R<sub>pos,1</sub>") %>% select(-nom_corr), metadata_eng, "arret_prema")
-ggsave(filename = "figures/results/arret_prema_Rpos.png",
+plot_arret_prec <- plot_opchar(tableau_results_Rvar %>% filter(nom_corr == "R<sub>pos,1</sub>") %>% select(-nom_corr), metadata_eng, "arret_prema",
+                               niveaux = c("topiva", "bopiva", "simon", "toxrapp", "toxprior"),
+                               etiquettes = c("TOP<sub>eff</sub> + PP<sub>tox</sub>", "BOP<sub>eff</sub> + PP<sub>tox</sub>",
+                                              "Simon + PP<sub>tox</sub>", 
+                                              "TOP<sup>t</sup><sub>eff/tox</sub>",
+                                              "iTOP<sub>eff/tox</sub>"))
+ggsave(filename = "figures/results/arret_prema_Rpos_rev2.png",
        plot = plot_arret_prec, device = "png",
        height = 14, width = 20)
-ggsave(filename = "figures/results/arret_prema_Rpos.eps",
+ggsave(filename = "figures/results/arret_prema_Rpos_rev2.eps",
        plot = plot_arret_prec, device = cairo_ps,
        height = 9000, width = 17000, units = "px", dpi = 800)
 
 plot_pts <- plot_opchar(tableau_results_Rvar %>% filter(nom_corr == "R<sub>pos,1</sub>") %>% select(-nom_corr), metadata_eng, "moy_pts")
-ggsave(filename = "figures/results/moy_pts_Rpos.png",
+plot_pts <- plot_opchar(tableau_results_Rvar %>% filter(nom_corr == "R<sub>pos,1</sub>") %>% select(-nom_corr), metadata_eng, "moy_pts",
+                        niveaux = c("topiva", "bopiva", "simon", "toxrapp", "toxprior"),
+                        etiquettes = c("TOP<sub>eff</sub> + PP<sub>tox</sub>", "BOP<sub>eff</sub> + PP<sub>tox</sub>",
+                                       "Simon + PP<sub>tox</sub>", 
+                                       "TOP<sup>t</sup><sub>eff/tox</sub>",
+                                       "iTOP<sub>eff/tox</sub>"))
+ggsave(filename = "figures/results/moy_pts_Rpos_rev2.png",
        plot = plot_pts, device = "png",
        height = 14, width = 20)
-ggsave(filename = "figures/results/moy_pts_Rpos.eps",
+ggsave(filename = "figures/results/moy_pts_Rpos_rev2.eps",
        plot = plot_pts, device = cairo_ps,
        height = 9000, width = 17000, units = "px", dpi = 800)
 
 plot_duree <- plot_opchar(tableau_results_Rvar %>% filter(nom_corr == "R<sub>pos,1</sub>") %>% select(-nom_corr), metadata_eng, "moy_duree")
-ggsave(filename = "figures/results/moy_duree_Rpos.png",
+plot_duree <- plot_opchar(tableau_results_Rvar %>% filter(nom_corr == "R<sub>pos,1</sub>") %>% select(-nom_corr), metadata_eng, "moy_duree",
+                          niveaux = c("topiva", "bopiva", "simon", "toxrapp", "toxprior"),
+                          etiquettes = c("TOP<sub>eff</sub> + PP<sub>tox</sub>", "BOP<sub>eff</sub> + PP<sub>tox</sub>",
+                                         "Simon + PP<sub>tox</sub>", 
+                                         "TOP<sup>t</sup><sub>eff/tox</sub>",
+                                         "iTOP<sub>eff/tox</sub>"))
+ggsave(filename = "figures/results/moy_duree_Rpos_rev2.png",
        plot = plot_duree, device = "png",
        height = 14, width = 20)
-ggsave(filename = "figures/results/moy_duree_Rpos.eps",
+ggsave(filename = "figures/results/moy_duree_Rpos_rev2.eps",
        plot = plot_duree, device = cairo_ps,
        height = 9000, width = 17000, units = "px", dpi = 800)
 rm(plot_accept, plot_arret_prec, plot_pts, plot_duree)
@@ -69,34 +96,34 @@ rm(plot_accept, plot_arret_prec, plot_pts, plot_duree)
 # II/ Plot for all correlations ----
 
 plot_accept <- plot_opchar_facet(tableau_results_Rvar, metadata_eng, "accept_ttt")
-ggsave(filename = "figures/results/accept_ttt_Rvar.png",
+ggsave(filename = "figures/results/accept_ttt_Rvar_rev2.png",
        plot = plot_accept, device = "png",
        height = 16, width = 20)
-ggsave(filename = "figures/results/accept_ttt_Rvar.eps",
+ggsave(filename = "figures/results/accept_ttt_Rvar_rev2.eps",
        plot = plot_accept, device = cairo_ps,
        height = 9000, width = 17000, units = "px", dpi = 800)
 
 plot_arret_prec <- plot_opchar_facet(tableau_results_Rvar, metadata_eng, "arret_prema")
-ggsave(filename = "figures/results/arret_prema_Rvar.png",
+ggsave(filename = "figures/results/arret_prema_Rvar_rev2.png",
        plot = plot_arret_prec, device = "png",
        height = 16, width = 20)
-ggsave(filename = "figures/results/arret_prema_Rvar.eps",
+ggsave(filename = "figures/results/arret_prema_Rvar_rev2.eps",
        plot = plot_arret_prec, device = cairo_ps,
        height = 9000, width = 17000, units = "px", dpi = 800)
 
 plot_pts <- plot_opchar_facet(tableau_results_Rvar, metadata_eng, "moy_pts")
-ggsave(filename = "figures/results/moy_pts_Rvar.png",
+ggsave(filename = "figures/results/moy_pts_Rvar_rev2.png",
        plot = plot_pts, device = "png",
        height = 16, width = 20)
-ggsave(filename = "figures/results/moy_pts_Rvar.eps",
+ggsave(filename = "figures/results/moy_pts_Rvar_rev2.eps",
        plot = plot_pts, device = cairo_ps,
        height = 9000, width = 17000, units = "px", dpi = 800)
 
 plot_duree <- plot_opchar_facet(tableau_results_Rvar, metadata_eng, "moy_duree")
-ggsave(filename = "figures/results/moy_duree_Rvar.png",
+ggsave(filename = "figures/results/moy_duree_Rvar_rev2.png",
        plot = plot_duree, device = "png",
        height = 16, width = 20)
-ggsave(filename = "figures/results/moy_duree_Rvar.eps",
+ggsave(filename = "figures/results/moy_duree_Rvar_rev2.eps",
        plot = plot_duree, device = cairo_ps,
        height = 9000, width = 17000, units = "px", dpi = 800)
 rm(plot_accept, plot_arret_prec, plot_pts, plot_duree)
@@ -110,13 +137,13 @@ plot_alpha_pos <- tableau_results_Rvar %>%
   pivot_longer(cols = c(accept_ttt_topiva:accept_ttt_toxprior)) %>%
   mutate(scenar = factor(scenar, levels = c("H0", "H1"), labels = c("Scenario 1", "Scenario 2")),
          name = factor(name,
-                       levels = c("accept_ttt_topiva", "accept_ttt_bopiva", "accept_ttt_simon", "accept_ttt_classique", "accept_ttt_toxrapp", "accept_ttt_toxprior"),
+                       levels = c("accept_ttt_topiva", "accept_ttt_bopiva", "accept_ttt_simon", "accept_ttt_toxrapp", "accept_ttt_toxprior"),
                        labels = c("TOP<sub>eff</sub> + PP<sub>tox</sub>", 
                                   "BOP<sub>eff</sub> + PP<sub>tox</sub>", 
-                                  "Simon + PP<sub>tox</sub>", 
-                                  "TOP<sub>eff/tox</sub> with 2 interim analyses", 
-                                  "TOP<sub>eff/tox</sub> with close monitoring of toxicity", 
-                                  "TOP<sub>eff/tox</sub> with update of the prior of toxicity"))) %>% 
+                                  "Simon + PP<sub>tox</sub>",
+                                  "TOP<sup>t</sup><sub>eff/tox</sub>", 
+                                  "iTOP<sub>eff/tox</sub>"))) %>% 
+  filter(!is.na(name)) %>% 
   ggplot(aes(x = R, y = value, color = name)) +
   geom_point() +
   geom_line() +
@@ -128,9 +155,33 @@ plot_alpha_pos <- tableau_results_Rvar %>%
   labs(color = "Design",
        x = "Correlation between efficacy and toxicity",
        y = "% of acceptation of the treatment")
+# plot_alpha_pos <- tableau_results_Rvar %>% 
+#   filter(scenar %in% c("H0", "H1")) %>% 
+#   select(R, probas, scenar, starts_with("accept_ttt")) %>%
+#   pivot_longer(cols = c(accept_ttt_topiva:accept_ttt_toxprior)) %>%
+#   mutate(scenar = factor(scenar, levels = c("H0", "H1"), labels = c("Scenario 1", "Scenario 2")),
+#          name = factor(name,
+#                        levels = c("accept_ttt_topiva", "accept_ttt_bopiva", "accept_ttt_simon", "accept_ttt_classique", "accept_ttt_toxrapp", "accept_ttt_toxprior"),
+#                        labels = c("TOP<sub>eff</sub> + PP<sub>tox</sub>", 
+#                                   "BOP<sub>eff</sub> + PP<sub>tox</sub>", 
+#                                   "Simon + PP<sub>tox</sub>", 
+#                                   "TOP<sub>eff/tox</sub>", 
+#                                   "TOP<sup>t</sup><sub>eff/tox</sub>", 
+#                                   "iTOP<sub>eff/tox</sub>"))) %>% 
+#   ggplot(aes(x = R, y = value, color = name)) +
+#   geom_point() +
+#   geom_line() +
+#   geom_hline(data = data.frame(scenar = c("Scenario 1", "Scenario 2"), intercept = c(.05, .9)), aes(yintercept = intercept), linetype = "dashed") +
+#   facet_wrap(vars(scenar), scales = "free_y") +
+#   scale_y_continuous(labels = scales::percent_format()) +
+#   theme(legend.title = element_text(face = "bold"),
+#         legend.text = element_markdown()) +
+#   labs(color = "Design",
+#        x = "Correlation between efficacy and toxicity",
+#        y = "% of acceptation of the treatment")
 ggsave(plot = plot_alpha_pos,
-       filename = "figures/results/alpha_puiss_pos.png",
+       filename = "figures/results/alpha_puiss_pos_rev2.png",
        device = "png", height = 8, width = 12)
-ggsave(filename = "figures/results/alpha_puiss_pos.eps",
+ggsave(filename = "figures/results/alpha_puiss_pos_rev2.eps",
        plot = plot_alpha_pos, device = cairo_ps,
        height = 6000, width = 10000, units = "px", dpi = 800)
