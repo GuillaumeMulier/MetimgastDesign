@@ -9,6 +9,7 @@ Folders:
     - functions.R = functions used in the other scripts
     - metadata.R = data used in other scripts and centralized in this script (for example, the scenarios)
     - thresholds.R = finding the optimal thresholds
+    - thresholds_postreview.R = finding the optimal thresholds with about 5% type I error rate as asked by reviewer to have comparable designs
     - resultats_these.R = simulate the results of simulated trials
     - figures.R = generate the figures in the paper
     - simu_corr_data.R = how we simulated the correlated data
